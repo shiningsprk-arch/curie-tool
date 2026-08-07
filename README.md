@@ -2,7 +2,7 @@
 
 用 LLM（Claude / DeepSeek 等）为书籍生成**角色与地点的无剧透简介**，以 EPUB 3 弹窗脚注形式注入，生成一本新书并重新入库——原文件零改动，删除新书即可还原。
 
-基于 [Fank1/curie](https://github.com/Fank1/curie)（Erik Fanki 的 Calibre 插件）移植，**已获作者明确许可**（"Borrow or steal the code you want"）。适用于 [PoxenStudio/mybooks](https://github.com/PoxenStudio/mybooks) 的 Toolbox 插件体系。
+基于 [Fank1/curie](https://github.com/Fank1/curie)（Erik Fanki 的 Calibre 插件）移植，**已获作者明确许可**。适用于 [PoxenStudio/mybooks](https://github.com/PoxenStudio/mybooks) 的 Toolbox 插件体系。
 
 ## 功能特性
 
@@ -13,7 +13,7 @@
 - **同名消歧**：去重合并重复条目 + 活跃区间排序（同一章内谁"在场"谁优先抢注共享短名）+ enrich 单遍产出段落级 `mentions` 表（如《百年孤独》里"奥雷里亚诺"逐段裁决归属上校/巴比伦/阿玛多），零额外 API 调用。
 - **双 provider 格式**
   - `anthropic 格式`（推荐）：支持内置联网搜索 `web_search`，资料准确；
-  - `openai 格式`：OpenAI 兼容接口（DeepSeek / Qwen 等），无联网搜索、无缓存，成本更低。
+  - `openai 格式`：OpenAI 兼容接口（DeepSeek / Qwen 等），无联网搜索。
 - **CJK 友好的名称匹配**：`张三` 可匹配 `张三说` / `说张三`；单字名（`三`）不误匹配 `刘三`；`Alice` 不误匹配 `MyAlice`，且可匹配 `Alice笑着说`。
 - **脚注密度可选**：每次出现 / 每 10 段一次 / 每章一次。
 - **重新生成**：复用已生成的角色数据，只按新密度重注脚注，不消耗 API 额度。
@@ -87,6 +87,7 @@ tests/test_curie_core.py           单元测试
 
 ## 许可与致谢
 
+- 本项目以 **MIT 协议**开源（见 [LICENSE](LICENSE)）；
 - 上游：[Fank1/curie](https://github.com/Fank1/curie) © Erik Fanki，已获作者许可移植；
 - 适配（MyBooks）：shiningsprk-arch。
 
