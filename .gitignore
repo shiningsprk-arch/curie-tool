@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Node / Nuxt
+node_modules/
+.nuxt/
+dist/
+.nitro/
+
+# Runtime / generated (book data, encrypted config, keys, work dirs)
+*.enc
+*.key
+book_data.json
+source.epub
+curie_out.epub
+.curie_key
+work_dir/
+*.curie_tmp
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
