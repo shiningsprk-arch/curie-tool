@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Curie 无剧透导读 — 前端演示</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+    background: #f5f5f5;
+    color: #212121;
+    min-height: 100vh;
+    padding: 24px 16px 60px;
+  }
+  .topbar {
+    max-width: 760px; margin: 0 auto 16px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .topbar h1 { font-size: 20px; font-weight: 700; }
+  .btn-close {
+    border: none; background: #f44336; color: #fff; cursor: pointer;
+    padding: 6px 12px; border-radius: 6px; font-size: 13px;
+  }
+  .card {
+    max-width: 760px; margin: 0 auto;
+    background: #fff; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.12);
+    padding: 24px;
+  }
+  .warn {
+    background: #fff3cd; border-left: 4px solid #ff9800; color: #664d03;
+    border-radius: 8px; padding: 10px 14px; font-size: 13px; line-height: 1.6; margin-bottom: 18px;
+  }
+  .field {
+    width: 100%; padding: 10px 12px; font-size: 14px; color: #212121;
+    border: 1px solid #c5c5c5; border-radius: 6px; outline: none;
+    transition: border-color .15s;
+  }
+  .field:focus { border-color: #1976d2; box-shadow: 0 0 0 2px rgba(25,118,210,.15); }
+  .field-wrap { margin-bottom: 14px; }
+  .field-wrap label { display: block; font-size: 13px; color: #616161; margin-bottom: 4px; }
+  .search-wrap { position: relative; margin-bottom: 16px; }
+  .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9e9e9e; font-size: 15px; }
+  .search-wrap .field { padding-left: 36px; }
+  .spinner {
+    display: inline-block; width: 14px; height: 14px; vertical-align: -2px;
+    border: 2px solid #1976d2; border-top-color: transparent; border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .book-list { max-height: 320px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; margin-bottom: 16px; }
+  .book-item {
+    display: flex; align-items: center; gap: 12px; padding: 10px 12px; cursor: pointer;
+    border-bottom: 1px solid #f0f0f0; transition: background .15s;
+  }
+  .book-item:last-child { border-bottom: none; }
+  .book-item:hover { background: rgba(25,118,210,.08); }
+  .book-item.sel { background: rgba(25,118,210,.18); }
+  .book-thumb {
+    width: 44px; height: 44px; border-radius: 6px; background: #e3f2fd;
+    display: flex; align-items: center; justify-content: center; color: #1976d2; font-size: 20px;
+    flex: 0 0 44px;
+  }
+  .book-title { font-size: 14px; font-weight: 600; line-height: 1.3; }
+  .book-author { font-size: 12px; color: #757575; margin-top: 2px; }
+  .chips { margin-top: 6px; }
+  .chip {
+    display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 12px;
+    border: 1px solid #c5c5c5; color: #616161; margin-right: 4px;
+  }
+  .chip.epub { border-color: #1976d2; color: #1976d2; }
+  .row { display: flex; gap: 12px; margin-bottom: 14px; }
+  .row > div { flex: 1; }
+  .switch-row { display: flex; gap: 12px; margin-bottom: 14px; }
+  .switch-wrap { flex: 1; display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+  .switch {
+    position: relative; width: 40px; height: 20px; background: #bdbdbd; border-radius: 12px;
+    transition: background .2s; flex: 0 0 40px;
+  }
+  .switch::after {
+    content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+    background: #fff; border-radius: 50%; transition: left .2s; box-shadow: 0 1px 2px rgba(0,0,0,.3);
+  }
+  .switch.on { background: #1976d2; }
+  .switch.on::after { left: 22px; }
+  .btns { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+  .btn {
+    min-width: 140px; padding: 9px 18px; border-radius: 6px; font-size: 14px;
+    cursor: pointer; transition: all .15s; border: none;
+  }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-primary { background: #1976d2; color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: #1565c0; }
+  .btn-outlined { background: #fff; color: #616161; border: 1px solid #9e9e9e; }
+  .btn-outlined:hover:not(:disabled) { border-color: #616161; color: #212121; }
+  .btn-success { background: #43a047; color: #fff; }
+  .alert {
+    border-radius: 8px; padding: 10px 14px; font-size: 13px; margin: 14px 0; line-height: 1.5;
+  }
+  .alert.success { background: #e8f5e9; color: #1b5e20; }
+  .alert.error { background: #ffebee; color: #b71c1c; }
+  .alert.info { background: #e3f2fd; color: #0d47a1; }
+  .prog-wrap { margin-top: 16px; }
+  .prog-head { display: flex; justify-content: space-between; font-size: 12px; color: #616161; margin-bottom: 6px; }
+  .prog-bar { height: 10px; background: #e0e0e0; border-radius: 6px; overflow: hidden; }
+  .prog-fill { height: 100%; width: 0; background: #1976d2; border-radius: 6px; transition: width .3s; }
+  .hint-divider { border: none; border-top: 1px solid #e0e0e0; margin: 20px 0; }
+  .preview-head { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+  .preview-sub { font-size: 12px; color: #9e9e9e; font-weight: 400; }
+  .panel { border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 8px; overflow: hidden; }
+  .panel-head {
+    padding: 10px 14px; cursor: pointer; font-size: 14px; display: flex;
+    justify-content: space-between; align-items: center;
+  }
+  .panel-head .meta { font-size: 12px; color: #9e9e9e; font-weight: 400; }
+  .panel-body { padding: 10px 14px; font-size: 13px; color: #424242; border-top: 1px solid #eee; display: none; line-height: 1.6; }
+  .panel.open .panel-body { display: block; }
+  .panel.open .arrow { transform: rotate(180deg); }
+  .arrow { transition: transform .2s; color: #9e9e9e; }
+  .footnote {
+    font-size: 11px; color: #9e9e9e; text-align: center; margin-top: 18px;
+  }
+  .regen-tip { font-size: 12px; color: #9e9e9e; margin-top: 6px; text-align: center; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>Curie 无剧透导读</h1>
+    <button class="btn-close" onclick="alert('演示页：关闭按钮仅为示意')">关闭</button>
+  </div>
+
+  <div class="card">
+    <div class="warn">
+      基于 Fank1/curie（Erik Fanki 的 Calibre 插件，已获作者许可）移植：用 LLM（Claude / DeepSeek 等）
+      为书籍生成角色与地点的无剧透简介，以 EPUB 3 弹窗脚注形式注入新 EPUB 并重新入库，原文件零改动。
+      本页为前端交互演示（数据与进度均为模拟，无真实 API 调用）。
+    </div>
+
+    <div class="search-wrap">
+      <span class="search-icon">&#128269;</span>
+      <input id="q" class="field" placeholder="搜索书籍（含 EPUB 格式的书籍）" onkeyup="doSearch()">
+    </div>
+
+    <div id="searching" style="display:none;text-align:center;padding:24px;color:#9e9e9e;">
+      <span class="spinner"></span> 搜索中…
+    </div>
+    <div id="bookList" class="book-list"></div>
+    <div id="noResult" style="display:none;text-align:center;padding:16px;color:#9e9e9e;">未找到相关书籍</div>
+
+    <div id="configArea" style="display:none;">
+      <hr class="hint-divider">
+
+      <div class="field-wrap">
+        <label>API 格式（provider）</label>
+        <select id="provider" class="field" onchange="onProviderChange()">
+          <option value="anthropic">anthropic 格式（推荐：支持开启联网搜索 web_search）</option>
+          <option value="openai_compat">openai 格式（OpenAI 兼容接口：DeepSeek / Qwen 等，无联网搜索）</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <div class="field-wrap">
+          <label>API 地址</label>
+          <input id="apiUrl" class="field" placeholder="https://api.anthropic.com">
+        </div>
+        <div class="field-wrap">
+          <label>模型名称</label>
+          <input id="modelName" class="field" placeholder="claude-sonnet-4-6">
+        </div>
+      </div>
+
+      <div class="field-wrap">
+        <label>API Key</label>
+        <input id="apiKey" class="field" type="password" placeholder="输入 API Key">
+      </div>
+
+      <div class="switch-row">
+        <div class="switch-wrap" onclick="toggleSwitch(this, 'includeCharacters')">
+          <span class="switch on" id="includeCharacters"></span> 生成角色简介
+        </div>
+        <div class="switch-wrap" onclick="toggleSwitch(this, 'includePlaces')">
+          <span class="switch" id="includePlaces"></span> 生成地点简介
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field-wrap">
+          <label>提示语言</label>
+          <select id="language" class="field">
+            <option value="auto">跟随书籍语言（默认中文）</option>
+            <option value="Chinese">中文</option>
+            <option value="English">英语</option>
+            <option value="Svenska">瑞典语</option>
+          </select>
+        </div>
+        <div class="field-wrap">
+          <label>脚注密度</label>
+          <select id="density" class="field">
+            <option value="every_mention">每次出现都标注</option>
+            <option value="every_10_paragraphs" selected>每 10 段标注一次</option>
+            <option value="once_per_chapter">每章一次</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="alertBox"></div>
+
+      <div class="btns">
+        <button id="btnTest" class="btn btn-outlined" onclick="testConnection()" disabled>测试连接</button>
+        <button id="btnConvert" class="btn btn-primary" onclick="startConvert()" disabled>生成导读</button>
+        <button id="btnRegen" class="btn btn-outlined" onclick="startRegenerate()" disabled>重新生成（改注入密度）</button>
+      </div>
+      <div class="regen-tip" id="regenTip" style="display:none;">重新生成复用已生成的角色数据，仅按新密度重注脚注，不消耗 API 额度</div>
+
+      <div id="progWrap" class="prog-wrap" style="display:none;">
+        <div class="prog-head"><span id="progStage">处理中…</span><span id="progPct">0%</span></div>
+        <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+      </div>
+
+      <div id="doneArea" style="display:none;text-align:center;margin-top:16px;">
+        <button class="btn btn-success" onclick="alert('演示环境无后端，无法跳转书库')">前往阅读新书</button>
+      </div>
+
+      <div id="previewArea" style="display:none;">
+        <hr class="hint-divider">
+        <div class="preview-head">
+          已生成的角色 / 地点
+          <span class="preview-sub" id="previewCount"></span>
+        </div>
+        <div id="charPanels"></div>
+        <div id="locPanels" style="margin-top:4px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footnote">Curie 前端演示 — 模拟数据仅供参考 · 与 curie-tool 插件 v0.1.0 页面等价</div>
+
+<script>
+// ── 模拟数据 ─────────────────────────────────────────────
+const BOOKS = [
+  { id: 1, title: "百年孤独", author: "加西亚·马尔克斯", files: ["EPUB", "MOBI"], preview: 1 },
+  { id: 2, title: "百年孤独（Curie 导读版）", author: "加西亚·马尔克斯", files: ["EPUB"], preview: 1 },
+  { id: 3, title: "夏帆", author: "周而复", files: ["EPUB"], preview: 0 },
+  { id: 4, title: "红楼梦", author: "曹雪芹", files: ["EPUB", "AZW3", "TXT"], preview: 0 },
+  { id: 5, title: "小王子", author: "圣埃克苏佩里", files: ["PDF", "MOBI"], preview: 0 },
+];
+
+// 《百年孤独》真实运行结果（角色/地点子集）
+const PREVIEW_1 = {
+  title: "百年孤独",
+  author: "加西亚·马尔克斯",
+  language: "Chinese",
+  characters: [
+    { full_name: "奥雷里亚诺·布恩迪亚", role: "主角", chapter: 1, occurrences: 1368,
+      description: "布恩迪亚家族的次子，沉默而执拗，青年时代便显示出预言般的气质。他目睹了父亲带领众人建立马孔多的过程，在实验室里捣鼓金银器皿的岁月里渐渐长大。" },
+    { full_name: "何塞·阿尔卡蒂奥·布恩迪亚", role: "主角", chapter: 1, occurrences: 1009,
+      description: "马孔多的奠基人，精力旺盛的探险者。他带领家人穿越沼泽来到这片土地，痴迷于吉卜赛人带来的新发明，把大半辈子花在反复试验炼金术上。" },
+    { full_name: "乌尔苏拉·伊瓜兰", role: "主要角色", chapter: 1, occurrences: 530,
+      description: "布恩迪亚家族的女主人，坚韧而务实。她经营着马孔多最初的家业，靠贩卖小糖果动物支撑起整个家族，也以清醒的目光看管着家里的男人们。" },
+    { full_name: "阿玛兰妲", role: "主要角色", chapter: 1, occurrences: 886,
+      description: "布恩迪亚家的小女儿，骄傲而敏感。她在钢琴声中长大，与远方表亲的婚约将整个家族卷入一场漫长的等待。" },
+    { full_name: "奥雷里亚诺·巴比伦", role: "配角", chapter: 1, occurrences: 820,
+      description: "家族最末一代的成员，一个沉默的男孩。他被关在老宅的作坊里长大，整日埋头破译吉卜赛人的羊皮卷手稿。" },
+  ],
+  locations: [
+    { name: "马孔多", type: "城镇", chapter: 1, occurrences: 199,
+      description: "布恩迪亚家族建立的村镇，建在一片河滩边。最初只有二十来户人家，泥巴和芦苇搭成的房子沿河岸排开。" },
+  ],
+};
+
+const PRESETS = {
+  anthropic:     { url: "https://api.anthropic.com",     model: "claude-sonnet-4-6" },
+  openai_compat: { url: "https://api.deepseek.com",      model: "deepseek-chat" },
+};
+
+// ── 状态 ────────────────────────────────────────────────
+let selected = null;
+let processing = false;
+let progress = 0;
+let stageMsg = "";
+let timer = null;
+
+const $ = (id) => document.getElementById(id);
+
+// ── 搜索 ────────────────────────────────────────────────
+function doSearch() {
+  const q = $("q").value.trim().toLowerCase();
+  $("searching").style.display = "block";
+  $("bookList").style.display = "none";
+  $("noResult").style.display = "none";
+  setTimeout(() => {
+    $("searching").style.display = "none";
+    $("bookList").style.display = "block";
+    const hits = BOOKS.filter(b => b.title.toLowerCase().includes(q));
+    renderBooks(hits);
+    $("noResult").style.display = hits.length ? "none" : "block";
+  }, 350);
+}
+
+function renderBooks(list) {
+  $("bookList").innerHTML = list.map(b => `
+    <div class="book-item ${selected && selected.id === b.id ? "sel" : ""}"
+         onclick="selectBook(${b.id})">
+      <div class="book-thumb">&#128214;</div>
+      <div style="flex:1;min-width:0;">
+        <div class="book-title">${esc(b.title)}</div>
+        <div class="book-author">${esc(b.author)}</div>
+        <div class="chips">${b.files.map(f =>
+          `<span class="chip ${f === "EPUB" ? "epub" : ""}">${f}</span>`).join("")}</div>
+      </div>
+      ${selected && selected.id === b.id ? '<div style="color:#1976d2;font-weight:700;">&#10003;</div>' : ""}
+    </div>`).join("");
+}
+
+function selectBook(id) {
+  const book = BOOKS.find(b => b.id === id);
+  if (!book) return;
+  if (selected && selected.id === id) { selected = null; } else { selected = book; }
+  stopProgress();
+  $("alertBox").innerHTML = "";
+  $("doneArea").style.display = "none";
+  if (!selected) { renderBooks(filtered()); $("configArea").style.display = "none"; return; }
+  renderBooks(filtered());
+  $("configArea").style.display = "block";
+  const hasEpub = (selected.files || []).includes("EPUB");
+  $("btnConvert").disabled = !hasEpub || processing;
+  $("btnTest").disabled = processing;
+  refreshRegen();
+  loadPreview();
+}
+
+function filtered() {
+  const q = $("q").value.trim().toLowerCase();
+  return BOOKS.filter(b => b.title.toLowerCase().includes(q));
+}
+
+// ── Provider 预设 ───────────────────────────────────────
+function onProviderChange() {
+  const p = PRESETS[$("provider").value];
+  $("apiUrl").value = p.url;
+  $("modelName").value = p.model;
+  const tip = $("provider").value === "openai_compat"
+    ? "提示：openai 格式无联网搜索，资料来自模型知识；deepseek 的 anthropic 兼容端点请填 https://api.deepseek.com/anthropic"
+    : "";
+  $("regenTip").textContent = tip;
+}
+
+// ── Switch ──────────────────────────────────────────────
+function toggleSwitch(el, id) {
+  const sw = $(id);
+  sw.classList.toggle("on");
+  refreshConvert();
+}
+
+function includeCharacters() { return $("includeCharacters").classList.contains("on"); }
+function includePlaces() { return $("includePlaces").classList.contains("on"); }
+
+// ── 测试连接（模拟） ────────────────────────────────────
+function testConnection() {
+  const btn = $("btnTest");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 测试中…';
+  showAlert("info", "正在连接 " + $("apiUrl").value + " …");
+  setTimeout(() => {
+    btn.innerHTML = "测试连接";
+    btn.disabled = processing;
+    showAlert("success", "连接成功，配置已保存");
+  }, 1500);
+}
+
+// ── 生成导读（模拟流水线） ──────────────────────────────
+function startConvert() {
+  if (!selected || !$("apiKey").value.trim() || !$("modelName").value.trim()) {
+    showAlert("error", "请填写 API Key 与模型名称");
+    return;
+  }
+  resetRun("生成导读任务已启动（模拟）");
+  const stages = [
+    { pct: 15,  msg: "Step 1: 联网搜索书籍资料…" },
+    { pct: 40,  msg: "Step 1: 生成角色与地点清单…" },
+    { pct: 50,  msg: "Step 2: 解析 EPUB 章节…" },
+    { pct: 55,  msg: "Step 2: 统计名字出现次数…" },
+    { pct: 63,  msg: "Step 2: 智能分析（part 1/2，含同名消歧）…" },
+    { pct: 76,  msg: "Step 2: 智能分析（part 2/2）…" },
+    { pct: 84,  msg: "Step 4: 剧透审查 1/3…" },
+    { pct: 88,  msg: "Step 4: 渐进式时间线构建…" },
+    { pct: 93,  msg: "Step 3: 注入 EPUB 3 脚注…" },
+    { pct: 97,  msg: "重新入库：生成《" + selected.title.slice(0, 30) + "（Curie 导读版）》…" },
+  ];
+  runPipeline(stages);
+}
+
+// ── 重新生成（模拟，复用缓存数据） ──────────────────────
+function startRegenerate() {
+  if (!selected || !hasPreview()) { showAlert("error", "尚未生成过导读数据"); return; }
+  resetRun("重新生成任务已启动（模拟，复用已有角色数据）");
+  const stages = [
+    { pct: 20, msg: "读取缓存的角色 / 地点数据…" },
+    { pct: 40, msg: "按新密度重算注入位置…" },
+    { pct: 70, msg: "Step 3: 注入 EPUB 3 脚注…" },
+    { pct: 90, msg: "重新入库…" },
+  ];
+  runPipeline(stages);
+}
+
+function runPipeline(stages) {
+  processing = true;
+  progress = 0;
+  $("btnConvert").disabled = true;
+  $("btnTest").disabled = true;
+  $("btnRegen").disabled = true;
+  $("progWrap").style.display = "block";
+  $("doneArea").style.display = "none";
+  $("alertBox").innerHTML = "";
+  let si = 0;
+  timer = setInterval(() => {
+    progress += 1 + Math.random() * 2;
+    while (si < stages.length && progress >= stages[si].pct) {
+      stageMsg = stages[si].msg; si++;
+    }
+    if (progress >= 100) {
+      progress = 100; stageMsg = "完成";
+      clearInterval(timer); timer = null;
+      processing = false;
+      $("doneArea").style.display = "block";
+      showAlert("success", "《" + selected.title + "》的 Curie 导读已生成：5 个角色、1 个地点，新书已入库（原文件未改动）");
+      refreshRegen();
+      loadPreview();
+    }
+    renderProg();
+  }, 90);
+}
+
+function renderProg() {
+  $("progFill").style.width = progress + "%";
+  $("progPct").textContent = Math.floor(progress) + "%";
+  $("progStage").textContent = stageMsg;
+}
+
+function resetRun(startMsg) {
+  stopProgress();
+  stageMsg = startMsg;
+  showAlert("success", startMsg);
+  renderProg();
+}
+
+function stopProgress() {
+  if (timer) { clearInterval(timer); timer = null; }
+}
+
+// ── 预览 ────────────────────────────────────────────────
+function hasPreview() { return selected && selected.preview === 1; }
+
+function loadPreview() {
+  const area = $("previewArea");
+  if (!hasPreview()) { area.style.display = "none"; return; }
+  const d = PREVIEW_1;
+  $("previewCount").textContent = "（" + d.characters.length + " 个角色 / " + d.locations.length + " 个地点）";
+  $("charPanels").innerHTML = d.characters.map(c => `
+    <div class="panel" onclick="this.classList.toggle('open')">
+      <div class="panel-head">
+        <span>${esc(c.full_name)}</span>
+        <span class="meta">${esc(c.role)} · 章节 ${c.chapter} · 出现 ${c.occurrences} 次 <span class="arrow">&#9660;</span></span>
+      </div>
+      <div class="panel-body">${esc(c.description)}</div>
+    </div>`).join("");
+  $("locPanels").innerHTML = d.locations.map(l => `
+    <div class="panel" onclick="this.classList.toggle('open')">
+      <div class="panel-head">
+        <span>${esc(l.name)}</span>
+        <span class="meta">${esc(l.type)} · 章节 ${l.chapter} · 出现 ${l.occurrences} 次 <span class="arrow">&#9660;</span></span>
+      </div>
+      <div class="panel-body">${esc(l.description)}</div>
+    </div>`).join("");
+  area.style.display = "block";
+}
+
+// ── 工具 ────────────────────────────────────────────────
+function refreshRegen() {
+  $("btnRegen").disabled = processing || !selected || !hasPreview();
+  $("regenTip").style.display = ($("provider").value === "openai_compat" || (!processing && selected && hasPreview())) ? "block" : "none";
+  $("regenTip").textContent = ($("provider").value === "openai_compat")
+    ? "提示：openai 格式无联网搜索，资料来自模型知识；deepseek 的 anthropic 兼容端点请填 https://api.deepseek.com/anthropic"
+    : "重新生成复用已生成的角色数据，仅按新密度重注脚注，不消耗 API 额度";
+}
+
+function refreshConvert() {
+  if (selected) {
+    $("btnConvert").disabled = processing || !(selected.files || []).includes("EPUB") ||
+      !(includeCharacters() || includePlaces());
+  }
+}
+
+function showAlert(type, msg) {
+  $("alertBox").innerHTML = `<div class="alert ${type}">${esc(msg)}</div>`;
+}
+
+function esc(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+// ── 初始化 ──────────────────────────────────────────────
+onProviderChange();
+renderBooks(BOOKS);
+$("bookList").style.display = "block";
+</script>
+</body>
+</html>
