@@ -2,7 +2,7 @@
 Curie core: EPUB 3 popup footnote injection.
 
 Ported from Fank1/curie (https://github.com/Fank1/curie) with permission.
-Original author: Erik Fanki. Adapted for MyBooks by shiningsprk-arch.
+Original author: Fank1. Adapted for MyBooks by shiningsprk-arch.
 
 Injects spoiler-free character/location hints as EPUB 3 popup footnotes.
 Each entity gets its own dedicated XHTML spine document (linear=no) so that

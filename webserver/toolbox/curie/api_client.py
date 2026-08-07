@@ -8,7 +8,7 @@ Dual-mode provider abstraction:
   (DeepSeek / Qwen / SiliconFlow etc.) without built-in web search
   (knowledge-only Step 1, slightly lower quality).
 
-Original curie api_client by Erik Fanki (https://github.com/Fank1/curie),
+Original curie api_client by Fank1 (https://github.com/Fank1/curie),
 used with permission. Adapted for MyBooks by shiningsprk-arch.
 """
 

@@ -2,7 +2,7 @@
 Curie core: EPUB parsing utilities.
 
 Ported from Fank1/curie (https://github.com/Fank1/curie) with permission.
-Original author: Erik Fanki. Adapted for MyBooks by shiningsprk-arch.
+Original author: Fank1. Adapted for MyBooks by shiningsprk-arch.
 """
 
 import re

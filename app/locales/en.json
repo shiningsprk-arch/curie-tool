@@ -1502,7 +1502,7 @@
   "curie": {
     "title": "Curie Spoiler-free Guide",
     "close": "Close",
-    "hint": "Generate spoiler-free character/location guides for your books using an LLM (Claude / DeepSeek etc.), injected as popup footnotes into a new EPUB that is re-imported into the library. Your original files are never touched — just delete the new book to revert. Ported from Fank1/curie (Erik Fanki) with permission.",
+    "hint": "Generate spoiler-free character/location guides for your books using an LLM (Claude / DeepSeek etc.), injected as popup footnotes into a new EPUB that is re-imported into the library. Your original files are never touched — just delete the new book to revert. Ported from Fank1/curie with permission.",
     "selectBook": "Search books (EPUB required)",
     "noResults": "No books found",
     "provider": "API Provider",

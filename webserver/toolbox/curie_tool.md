@@ -2,10 +2,10 @@
 
 ## 项目来源
 
-- **上游项目**：[Fank1/curie](https://github.com/Fank1/curie) —— Erik Fanki 开发的 Calibre 插件，
+- **上游项目**：[Fank1/curie](https://github.com/Fank1/curie) —— Fank1 开发的 Calibre 插件，
   用 Claude 为书籍生成角色/地点的**无剧透**简介，并以 EPUB 3 弹窗脚注形式注入。
 - **授权**：作者已通过 GitHub 明确许可（原话 "Borrow or steal the code you want"）。
-- **署名**：核心逻辑保留原注释署名 Erik Fanki；MyBooks 适配作者 shiningsprk-arch。
+- **署名**：核心逻辑保留原注释署名 Fank1；MyBooks 适配作者 shiningsprk-arch。
 
 ## 与上游的差异
 

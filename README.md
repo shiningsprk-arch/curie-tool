@@ -2,7 +2,7 @@
 
 用 LLM（Claude / DeepSeek 等）为书籍生成**角色与地点的无剧透简介**，以 EPUB 3 弹窗脚注形式注入，生成一本新书并重新入库——原文件零改动，删除新书即可还原。
 
-基于 [Fank1/curie](https://github.com/Fank1/curie)（Erik Fanki 的 Calibre 插件）移植，**已获作者明确许可**。适用于 [PoxenStudio/mybooks](https://github.com/PoxenStudio/mybooks) 的 Toolbox 插件体系。
+基于 [Fank1/curie](https://github.com/Fank1/curie)（Fank1 的 Calibre 插件）移植，**已获作者明确许可**。适用于 [PoxenStudio/mybooks](https://github.com/PoxenStudio/mybooks) 的 Toolbox 插件体系。
 
 ## 功能特性
 
@@ -88,7 +88,7 @@ tests/test_curie_core.py           单元测试
 ## 许可与致谢
 
 - 本项目以 **MIT 协议**开源（见 [LICENSE](LICENSE)）；
-- 上游：[Fank1/curie](https://github.com/Fank1/curie) © Erik Fanki，已获作者许可移植；
+- 上游：[Fank1/curie](https://github.com/Fank1/curie)，已获作者许可移植；
 - 适配（MyBooks）：shiningsprk-arch。
 
 > 演示页说明：仓库根目录提供 `curie导读-前端演示.html` 可选预览，但完整功能需在 MyBooks 环境运行。

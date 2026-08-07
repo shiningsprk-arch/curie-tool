@@ -2,7 +2,7 @@
 Curie — MyBooks toolbox tool.
 
 Ported from Fank1/curie (https://github.com/Fank1/curie, a Calibre plugin by
-Erik Fanki) with the author's explicit permission. Core logic lives in the
+Fank1) with the author's explicit permission. Core logic lives in the
 `curie/` subpackage; this class adapts it to the MyBooks Toolbox pattern
 (BaseTool + background task + encrypted config + re-import as a new book).
 """
@@ -90,7 +90,7 @@ class CurieTool(BaseTool):
         return {
             "tool_id": "curie",
             "name": "Curie 无剧透导读",
-            "description": "基于 Fank1/curie（Erik Fanki 的 Calibre 插件，已获作者许可）移植：用 LLM（Claude / DeepSeek 等）生成书籍角色与地点的无剧透简介，"
+            "description": "基于 Fank1/curie（已获作者许可）移植：用 LLM（Claude / DeepSeek 等）生成书籍角色与地点的无剧透简介，"
                            "以 EPUB 3 弹窗脚注形式注入新 EPUB 并重新入库，原文件零改动。",
             "revision": "0.1.0",
             "author": "shiningsprk-arch",

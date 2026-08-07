@@ -1502,7 +1502,7 @@
   "curie": {
     "title": "Curie 無劇透導讀",
     "close": "關閉",
-    "hint": "用 LLM（Claude / DeepSeek 等）為書籍生成角色與地點的無劇透簡介，以彈窗腳註形式注入新 EPUB 並重新入庫。原始檔案零改動，刪除新書即可還原。基於 Fank1/curie（Erik Fanki）移植，已獲作者許可。",
+    "hint": "用 LLM（Claude / DeepSeek 等）為書籍生成角色與地點的無劇透簡介，以彈窗腳註形式注入新 EPUB 並重新入庫。原始檔案零改動，刪除新書即可還原。基於 Fank1/curie 移植，已獲作者許可。",
     "selectBook": "搜尋書籍（需 EPUB 格式）",
     "noResults": "未找到相關書籍",
     "provider": "API 服務商",

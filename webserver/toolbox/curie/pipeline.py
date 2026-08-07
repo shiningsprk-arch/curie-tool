@@ -2,7 +2,7 @@
 Curie core: analysis pipeline orchestration.
 
 Ported from Fank1/curie's worker.py (https://github.com/Fank1/curie) with
-permission. Original author: Erik Fanki. Adapted for MyBooks by shiningsprk-arch.
+permission. Original author: Fank1. Adapted for MyBooks by shiningsprk-arch.
 
 Replaces the Calibre QThread worker with a plain function + progress callback,
 driven from a MyBooks toolbox background task.
