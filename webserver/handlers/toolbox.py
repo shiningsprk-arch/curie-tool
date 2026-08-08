@@ -20,7 +20,7 @@ from webserver.toolbox.author_clean_tool import AuthorCleanTool
 from webserver.toolbox.mimo_tts import MimoTTSTool
 from webserver.toolbox.bookbarn_acceptor_tool import BookBarnAcceptorTool
 from webserver.toolbox.curie_tool import CurieTool
-from webserver.services.background_service import BackgroundTask
+from webserver.services.background_service import BackgroundService, BackgroundTask
 from pathlib import Path
 
 
@@ -789,6 +789,20 @@ class AdminCurieRegenerate(BaseHandler):
         return {"err": "ok", "msg": _("Curie 重新生成任务已启动，右上角可以查看进度")}
 
 
+class AdminCurieCancel(BaseHandler):
+    @js
+    @is_admin
+    def post(self):
+        """请求取消当前 Curie 任务：BackgroundService.cancel_task 仅标记状态，
+        运行线程会在下一个检查点停止（分析分块/限速等待期间可立即中断）。"""
+        task_id = CurieTool._last_task_id
+        if task_id is None:
+            return {"err": "task.not_found", "msg": _("尚未启动 Curie 任务")}
+        if not BackgroundService().cancel_task(task_id):
+            return {"err": "task.not_found", "msg": _("任务不存在或已结束")}
+        return {"err": "ok", "msg": _("已请求取消任务，正在停止…")}
+
+
 def routes():
     return [
                 (r"/api/toolbox/list", AdminToolList),
@@ -826,4 +840,5 @@ def routes():
                 (r"/api/toolbox/curie/test", AdminCurieTest),
                 (r"/api/toolbox/curie/preview", AdminCuriePreview),
                 (r"/api/toolbox/curie/regenerate", AdminCurieRegenerate),
+                (r"/api/toolbox/curie/cancel", AdminCurieCancel),
     ]

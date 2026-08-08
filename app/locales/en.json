@@ -1540,6 +1540,9 @@
     "previewLocations": "locations",
     "chapter": "Ch.",
     "occurrences": "x",
+    "cancelBtn": "Cancel task",
+    "cancelRequested": "Cancel requested, stopping…",
+    "taskCancelled": "Task cancelled",
     "regenerateBtn": "Regenerate (new density)",
     "goBook": "Open New Book"
   }

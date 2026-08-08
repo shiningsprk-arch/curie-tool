@@ -228,6 +228,18 @@
                 <span>{{ progress }}%</span>
               </div>
               <v-progress-linear v-model="progress" height="10" rounded color="primary" />
+              <div v-if="processing" class="d-flex justify-center mt-2">
+                <v-btn
+                  small
+                  outlined
+                  color="error"
+                  :loading="cancelling"
+                  @click="cancelTask"
+                >
+                  <v-icon left small>mdi-cancel</v-icon>
+                  {{ $t('curie.cancelBtn') }}
+                </v-btn>
+              </div>
             </div>
 
             <div v-if="completed && newBookId" class="d-flex justify-center mt-4">
@@ -314,6 +326,7 @@ export default {
 
     processing: false,
     testing: false,
+    cancelling: false,
     resultMsg: '',
     resultType: 'success',
     completed: false,
@@ -550,6 +563,28 @@ export default {
         this.processing = false;
       }
     },
+    async cancelTask() {
+      if (!this.processing) return;
+      this.cancelling = true;
+      try {
+        const rsp = await this.$backend('/toolbox/curie/cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (rsp.err === 'ok') {
+          this.resultMsg = rsp.msg || this.$t('curie.cancelRequested');
+          this.resultType = 'info';
+        } else {
+          this.resultMsg = rsp.msg || rsp.err;
+          this.resultType = 'error';
+        }
+      } catch (e) {
+        this.resultMsg = String(e);
+        this.resultType = 'error';
+      } finally {
+        this.cancelling = false;
+      }
+    },
     pollProgress() {
       if (this.pollInterval) {
         clearInterval(this.pollInterval);
@@ -569,6 +604,12 @@ export default {
               this.resultMsg = rsp.msg || this.$t('curie.convertCompleted');
               this.resultType = 'success';
               this.loadPreview(this.selected.id);
+            } else if (rsp.data.status === 'cancelled') {
+              clearInterval(this.pollInterval);
+              this.pollInterval = null;
+              this.processing = false;
+              this.resultMsg = rsp.msg || this.$t('curie.taskCancelled');
+              this.resultType = 'info';
             } else if (rsp.data.status === 'failed') {
               clearInterval(this.pollInterval);
               this.pollInterval = null;

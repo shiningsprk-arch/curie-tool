@@ -1078,6 +1078,60 @@ def test_make_link_escapes_bare_lt():
     assert 'class="curie-noteref"' in link
 
 
+def test_curie_title_suffix_helpers():
+    """导读版标题后缀：v1 无序号、v2+ 递增；剥离旧后缀得根名。"""
+    from webserver.toolbox.curie.pipeline import curie_suffix_for, strip_curie_suffix
+
+    assert curie_suffix_for(1) == "（Curie 导读版）"
+    assert curie_suffix_for(2) == "（Curie 导读版 v2）"
+    assert curie_suffix_for(9) == "（Curie 导读版 v9）"
+    assert strip_curie_suffix("百年孤独（Curie 导读版）") == "百年孤独"
+    assert strip_curie_suffix("百年孤独（Curie 导读版 v3）") == "百年孤独"
+    assert strip_curie_suffix("百年孤独") == "百年孤独"
+    assert strip_curie_suffix("") == ""
+
+
+def test_pipeline_cancel_propagates():
+    """should_cancel=True 时流水线立即抛 RuntimeError('cancelled')。"""
+    with tempfile.TemporaryDirectory() as tmp:
+        epub = os.path.join(tmp, "t.epub")
+        build_sample_epub(epub)
+        out = os.path.join(tmp, "book_data.json")
+        try:
+            pipeline.run_curie_analysis(
+                None, "T", "A", epub, True, True, "English", out,
+                should_cancel=lambda: True,
+            )
+            assert False, "should have raised"
+        except RuntimeError as e:
+            assert str(e) == "cancelled", e
+
+
+def test_pipeline_cancel_between_chunks():
+    """取消在 enrich 分块之间生效（第二块前触发）。"""
+    calls = {"n": 0}
+
+    class _CancelProvider(_MockProvider):
+        def enrich_book_data(self, book_data, epub_text, ambiguous_names=None,
+                             progress_cb=None, chunk_label=""):
+            calls["n"] += 1
+            return book_data, {"input_tokens": 1, "output_tokens": 1}, []
+
+    with tempfile.TemporaryDirectory() as tmp:
+        epub = os.path.join(tmp, "t.epub")
+        build_sample_epub(epub)
+        out = os.path.join(tmp, "book_data.json")
+        try:
+            pipeline.run_curie_analysis(
+                _CancelProvider(), "T", "A", epub, True, True, "English", out,
+                progress_cb=lambda m: None,
+                should_cancel=lambda: calls["n"] >= 1,
+            )
+            assert False, "should have raised"
+        except RuntimeError as e:
+            assert str(e) == "cancelled", e
+
+
 def main():
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     failed = 0

@@ -13,6 +13,8 @@
 |---|---|---|
 | 运行环境 | Calibre GUI 插件（QThread） | MyBooks Toolbox 后台任务（AsyncService daemon 线程） |
 | 注入对象 | 直接改写库内 EPUB（带移除功能） | **生成新 EPUB 重新入库**，原文件零改动，删除新书即还原 |
+| 新书标题 | — | **序号化保留**：首版 `（Curie 导读版）`，重复转换自动递增 `（Curie 导读版 v2）`…，全部保留不覆盖（入库前 `new_api.search` 精确查重） |
+| 任务取消 | — | **可取消**：`POST /api/toolbox/curie/cancel` 标记任务 cancelled（框架 `cancel_task`），运行线程在分块间/限速等待期轮询状态立即停止，保留 cancelled 状态不覆盖为 completed |
 | LLM | 仅 Anthropic Claude（web_search 工具） | 双模式：Claude（联网研究，推荐）+ OpenAI 兼容（DeepSeek/Qwen，无搜索降级） |
 | API Key | Calibre JSONConfig | 仿 mimo_tts 的 PBKDF2 加密配置（`{work_dir}/api_config.enc`） |
 | 进度 | QThread 信号 | `BackgroundTask` + 轮询进度接口 |

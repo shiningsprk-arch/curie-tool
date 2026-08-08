@@ -1542,6 +1542,9 @@
     "previewLocations": "个地点",
     "chapter": "章节",
     "occurrences": "出现",
+    "cancelBtn": "取消任务",
+    "cancelRequested": "已请求取消，正在停止…",
+    "taskCancelled": "任务已取消",
     "regenerateBtn": "重新生成（改注入密度）",
     "goBook": "打开新书"
   }

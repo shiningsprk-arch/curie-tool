@@ -22,20 +22,21 @@ logger = logging.getLogger("curie")
 
 MIN_OCCURRENCES = 3
 
+# Curie 导读版标题后缀：v1 无序号（“（Curie 导读版）”），
+# 之后每次转换递增（“（Curie 导读版 v2）”…），新旧版本全部保留。
+CURIE_SUFFIX_RE = re.compile(r"（Curie 导读版(?: v\d+)?）$")
 
-def extract_spine_paragraphs(epub_path):
-    """Return [(chapter_num, para_num, text)] for every spine chapter's paragraphs.
 
-    Uses the same deterministic paragraph split as _to_llm_text so paragraph
-    numbers in the LLM chunk ([pN] markers) and at injection time always match.
-    """
-    from .epub_utils import get_spine_items
+def strip_curie_suffix(title):
+    """去掉标题尾部的 Curie 导读版后缀，得到根书名。"""
+    return CURIE_SUFFIX_RE.sub("", title or "").strip()
 
-    items = []
-    for chapter_num, _zip_path, html_bytes in get_spine_items(epub_path):
-        for para_num, text in _to_llm_text(html_bytes):
-            items.append((chapter_num, para_num, text))
-    return items
+
+def curie_suffix_for(version):
+    """第 version 版的后缀：v1 无序号，v2+ 带序号。"""
+    if version <= 1:
+        return "（Curie 导读版）"
+    return "（Curie 导读版 v%d）" % version
 
 
 def build_llm_chunks(paragraphs, chunk_token_budget=160_000):

@@ -34,15 +34,8 @@ CONFIG_FILE = "api_config.enc"
 KEY_FILE = ".curie_key"
 MAX_TITLE_LEN = 120
 
-# "重新入库" 时新书的标题后缀
+# "重新入库" 时新书的标题后缀（v1 无序号，后续版本递增序号，全部保留）
 TITLE_SUFFIX = "（Curie 导读版）"
-
-
-def _new_title(book_title: str) -> str:
-    """新书标题：追加后缀；若已带后缀则不重复堆叠。"""
-    if book_title.endswith(TITLE_SUFFIX):
-        return book_title[:MAX_TITLE_LEN]
-    return book_title[:MAX_TITLE_LEN - len(TITLE_SUFFIX)] + TITLE_SUFFIX
 
 
 # 语言代码 → 提示语言名（跟随书籍元数据时使用）
@@ -84,6 +77,15 @@ class CurieTool(BaseTool):
         if cls._last_task_id is None:
             return None
         return BackgroundService().get_task(cls._last_task_id)
+
+    @staticmethod
+    def _task_cancelled(task_id: Optional[int]) -> bool:
+        """任务是否已被标记为取消（BackgroundService.cancel_task 只改状态，
+        运行线程通过轮询此状态来实现可取消）。"""
+        if task_id is None:
+            return False
+        task = BackgroundService().get_task(task_id)
+        return bool(task and task.get("status") == BackgroundTask.STATUS_CANCELLED)
 
     @staticmethod
     def info() -> dict:
@@ -207,6 +209,34 @@ class CurieTool(BaseTool):
         except Exception as e:
             return False, str(e)
 
+    # ── Curie 版本书目标题（v1 / v2 / v3 … 全部保留） ─────────────────────
+
+    def _title_exists(self, title: str) -> bool:
+        """库中是否已存在该书名的书。优先精确搜索，失败时遍历元数据。"""
+        try:
+            safe = title.replace('"', "")
+            return bool(self.db.new_api.search('title:"=%s"' % safe))
+        except Exception as err:
+            logger.warning("[CurieTool] title search failed, fallback to scan: %s", err)
+        try:
+            for bid in self.get_all_book_ids():
+                mi = self.get_book_metadata(bid)
+                if (mi.title or "").strip() == title:
+                    return True
+        except Exception as err:
+            logger.warning("[CurieTool] title scan failed: %s", err)
+        return False
+
+    def next_curie_title(self, book_title: str) -> str:
+        """为 Curie 导读版生成不冲突的书名：v1 无后缀，冲突则 v2、v3… 递增。"""
+        root = pipeline.strip_curie_suffix(book_title)
+        for version in range(1, 1000):
+            suffix = pipeline.curie_suffix_for(version)
+            candidate = root[:MAX_TITLE_LEN - len(suffix)] + suffix
+            if not self._title_exists(candidate):
+                return candidate
+        raise RuntimeError(_("Curie 导读版标题序号已用尽，请整理书库"))
+
     # ── 书籍数据处理（同步查询） ──────────────────────────────────────────
 
     @AsyncService.register_function
@@ -251,6 +281,10 @@ class CurieTool(BaseTool):
                 data = {"status": "running", "stage": stage, "book_id": book_id}
                 data.update(extra)
                 self.update_task_progress(task_id, min(percent, 99), data)
+
+            def _check_cancel():
+                if CurieTool._task_cancelled(task_id):
+                    raise RuntimeError("cancelled")
 
             books = self.db.get_data_as_dict(ids=[book_id])
             if not books:
@@ -297,6 +331,8 @@ class CurieTool(BaseTool):
                 })
 
             def _stage_progress(msg: str):
+                # 取消检查放在最前：429 等待期间 progress_cb 每秒触发，可立即中断
+                _check_cancel()
                 msg_l = msg.lower()
                 if "step 1" in msg_l:
                     _update(15, "step1")
@@ -325,6 +361,7 @@ class CurieTool(BaseTool):
                 prov, book_title, ", ".join(authors) or "Unknown", source_copy,
                 include_characters, include_places, hint_lang, data_path,
                 progress_cb=_stage_progress,
+                should_cancel=lambda: CurieTool._task_cancelled(task_id),
             )
             if not book_data.get("characters") and not book_data.get("locations"):
                 raise RuntimeError(_("未从本书识别到任何角色或地点，已停止（未生成导读）"))
@@ -336,10 +373,11 @@ class CurieTool(BaseTool):
 
             _progress(93, "inject")
             pipeline.build_curied_epub(source_copy, output_epub, book_data, hint_density)
+            _check_cancel()
 
             # ── 重新入库（新书） ─────────────────────────────────────────
             _progress(96, "import")
-            new_title = _new_title(book_title)
+            new_title = self.next_curie_title(book_title)
             new_book_id = self.import_file(
                 user_id, output_epub, new_title, authors, delete_after_import=False,
             )
@@ -362,12 +400,17 @@ class CurieTool(BaseTool):
                             len(book_data.get("locations", [])), new_title))
 
         except Exception as err:
-            error_message = str(err)
-            self.add_msg(user_id, "danger", _("《%s》的 Curie 导读生成失败：%s") % (book_title, str(err)))
-            logger.error("[CurieTool] Convert failed for book_id=%d: %s", book_id, err)
-            logger.error(traceback.format_exc())
+            if str(err) == "cancelled" or CurieTool._task_cancelled(task_id):
+                logger.info("[CurieTool] Convert cancelled for book_id=%d", book_id)
+                self.add_msg(user_id, "info", _("《%s》的 Curie 导读生成已取消") % book_title)
+            else:
+                error_message = str(err)
+                self.add_msg(user_id, "danger", _("《%s》的 Curie 导读生成失败：%s") % (book_title, str(err)))
+                logger.error("[CurieTool] Convert failed for book_id=%d: %s", book_id, err)
+                logger.error(traceback.format_exc())
         finally:
-            if task_id is not None:
+            # 用户取消时保留 cancelled 状态（complete_task 会把它覆盖回 completed）
+            if task_id is not None and not CurieTool._task_cancelled(task_id):
                 self.complete_task(task_id, error_message=error_message)
             CurieTool._curie_lock.release()
 
@@ -386,6 +429,10 @@ class CurieTool(BaseTool):
         try:
             task_id = self.create_task(progress_data={"status": "starting", "book_id": book_id})
             CurieTool._last_task_id = task_id
+
+            def _check_cancel():
+                if CurieTool._task_cancelled(task_id):
+                    raise RuntimeError("cancelled")
 
             books = self.db.get_data_as_dict(ids=[book_id])
             if not books:
@@ -415,11 +462,12 @@ class CurieTool(BaseTool):
             output_epub = os.path.join(work_dir, "curie_out.epub")
 
             pipeline.build_curied_epub(source_copy, output_epub, book_data, hint_density)
+            _check_cancel()
 
             self.update_task_progress(task_id, 70, {"status": "running", "stage": "import", "book_id": book_id})
             mi = self.get_book_metadata(book_id)
             authors = [a for a in (list(mi.authors) if mi.authors else [])]
-            new_title = _new_title(book_title)
+            new_title = self.next_curie_title(book_title)
             new_book_id = self.import_file(
                 user_id, output_epub, new_title, authors, delete_after_import=False,
             )
@@ -437,11 +485,15 @@ class CurieTool(BaseTool):
                          % (book_title, new_title))
 
         except Exception as err:
-            error_message = str(err)
-            self.add_msg(user_id, "danger", _("《%s》的 Curie 导读重新生成失败：%s") % (book_title, str(err)))
-            logger.error("[CurieTool] Regenerate failed for book_id=%d: %s", book_id, err)
-            logger.error(traceback.format_exc())
+            if str(err) == "cancelled" or CurieTool._task_cancelled(task_id):
+                logger.info("[CurieTool] Regenerate cancelled for book_id=%d", book_id)
+                self.add_msg(user_id, "info", _("《%s》的 Curie 导读重新生成已取消") % book_title)
+            else:
+                error_message = str(err)
+                self.add_msg(user_id, "danger", _("《%s》的 Curie 导读重新生成失败：%s") % (book_title, str(err)))
+                logger.error("[CurieTool] Regenerate failed for book_id=%d: %s", book_id, err)
+                logger.error(traceback.format_exc())
         finally:
-            if task_id is not None:
+            if task_id is not None and not CurieTool._task_cancelled(task_id):
                 self.complete_task(task_id, error_message=error_message)
             CurieTool._curie_lock.release()
