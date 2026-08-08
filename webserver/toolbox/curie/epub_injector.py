@@ -369,7 +369,12 @@ def _inject_entity(html_str, names, entity_id, href, target_reader='koreader',
 
 
 def _make_link(text, href, attrs):
-    return f'<a href="{href}" {attrs}>{text}</a>'
+    # text is a raw HTML substring: entity-encoded text (&amp; etc.) is kept
+    # as-is, but a bare "<" would break the markup — escape only that. The
+    # class marks our links so _strip_injections removes them by class, not
+    # by a generic href pattern.
+    safe = text.replace('<', '&lt;')
+    return f'<a href="{href}" class="curie-noteref" {attrs}>{safe}</a>'
 
 
 def _make_aside(entity_id, name, aliases, role_or_type, description, target_reader='koreader'):
@@ -426,8 +431,15 @@ def _strip_injections(html_str):
     """Remove all Curie-injected noterefs and entity files' asides, and the body flag."""
     while True:
         prev = html_str
+        # Current format: links carry class="curie-noteref" — precise match.
         html_str = re.sub(
-            r'<a\b(?=[^>]*\bhref="[^"]*curie-[^"]*")[^>]*>(.*?)</a>',
+            r'<a\b(?=[^>]*\bclass="curie-noteref")[^>]*>(.*?)</a>',
+            r'\1', html_str, flags=re.DOTALL,
+        )
+        # Legacy format (injected before the class was added): our hrefs
+        # point at curie-char-* / curie-loc-* / curie-footnotes-* files only.
+        html_str = re.sub(
+            r'<a\b(?=[^>]*\bhref="[^"]*curie-(?:char|loc|footnotes)[^"]*")[^>]*>(.*?)</a>',
             r'\1', html_str, flags=re.DOTALL,
         )
         html_str = re.sub(
@@ -516,8 +528,10 @@ def _rewrite_epub(epub_path, modifications, exclude=None):
             with zipfile.ZipFile(tmp_path, 'w', zipfile.ZIP_DEFLATED) as zout:
                 # mimetype must be first and stored uncompressed per EPUB spec
                 if 'mimetype' in zin.namelist():
+                    mt_info = zipfile.ZipInfo('mimetype')
+                    mt_info.extra = b''  # EPUB spec: no extra fields allowed
                     zout.writestr(
-                        zipfile.ZipInfo('mimetype'),
+                        mt_info,
                         zin.read('mimetype'),
                         compress_type=zipfile.ZIP_STORED,
                     )

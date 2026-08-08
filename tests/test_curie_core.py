@@ -1022,6 +1022,62 @@ def test_spoiler_material_spreads_across_chapters():
     assert "19" in chs2  # very last chapter is covered
 
 
+def test_rate_limit_detection():
+    """429 detection must not over-match '4290' / port numbers."""
+    import webserver.toolbox.curie.api_client as ac
+
+    assert ac._is_rate_limit(Exception('HTTP 429: Too Many Requests'))
+    assert ac._is_rate_limit(Exception('error code 429'))
+    assert not ac._is_rate_limit(Exception('port 4291 refused'))
+    assert not ac._is_rate_limit(Exception('error code 4290'))
+    assert not ac._is_rate_limit(Exception('timeout'))
+
+    class _FakeResp:
+        status_code = 429
+
+    class _HttpErr(Exception):
+        def __init__(self):
+            self.response = _FakeResp()
+
+    assert ac._is_rate_limit(_HttpErr())
+
+
+def test_openai_reasoner_max_tokens():
+    """deepseek-reasoner gets the same 64k output headroom as Anthropic+DeepSeek."""
+    from webserver.toolbox.curie.api_client import OpenAICompatProvider
+
+    assert OpenAICompatProvider('k', 'deepseek-chat').max_tokens == 16000
+    assert OpenAICompatProvider('k', 'deepseek-reasoner').max_tokens == 64000
+    assert OpenAICompatProvider('k', 'MY-reasoner-X').max_tokens == 64000
+
+
+def test_strip_injections_keeps_foreign_links():
+    """Links pointing at non-curie hrefs (e.g. curie-chapter-1.xhtml) are
+    preserved; only our noterefs are stripped (by class, legacy by href)."""
+    html = (
+        '<p>'
+        '<a href="curie-chapter-1.xhtml#c1" epub:type="noteref">章节</a> '
+        '<a href="curie-char-1-v1.xhtml#curie-char-1-v1" class="curie-noteref" '
+        'epub:type="noteref" role="doc-noteref">老链接</a>'
+        '</p>'
+    )
+    out = epub_injector._strip_injections(html)
+    assert 'curie-chapter-1.xhtml' in out          # foreign link untouched
+    assert 'curie-char-1-v1.xhtml' not in out      # curie noteref stripped
+    assert '老链接' in out                          # inner text kept
+    # legacy href-only links (no class) are still removed
+    legacy = '<a href="curie-loc-3-v1.xhtml#curie-loc-3-v1" epub:type="noteref">地名</a>'
+    assert 'curie-loc-3-v1' not in epub_injector._strip_injections(legacy)
+
+
+def test_make_link_escapes_bare_lt():
+    """Bare '<' in matched text is escaped; entities are left as-is."""
+    link = epub_injector._make_link('A < B &amp; C', 'x.xhtml#x',
+                                    'epub:type="noteref"')
+    assert 'A &lt; B &amp; C' in link
+    assert 'class="curie-noteref"' in link
+
+
 def main():
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     failed = 0

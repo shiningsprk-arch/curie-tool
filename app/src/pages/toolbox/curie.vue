@@ -322,6 +322,7 @@ export default {
     newBookId: 0,
     preview: null,
     pollInterval: null,
+    _previewSeq: 0,
   }),
   computed: {
     providerOptions() {
@@ -449,19 +450,29 @@ export default {
       this.completed = false;
     },
     selectBook(book) {
-      this.selected = this.selected && this.selected.id === book.id ? null : book;
+      if (this.selected && this.selected.id === book.id) {
+        // 取消选择：不再发起 preview 请求
+        this.selected = null;
+        this.resultMsg = '';
+        this.completed = false;
+        this.preview = null;
+        return;
+      }
+      this.selected = book;
       this.resultMsg = '';
       this.completed = false;
       this.preview = null;
       this.loadPreview(book.id);
     },
     async loadPreview(bookId) {
+      const seq = ++this._previewSeq;
       try {
         const rsp = await this.$backend('/toolbox/curie/preview', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ book_id: bookId }),
         });
+        if (seq !== this._previewSeq) return; // 已被更新的请求取代
         if (rsp.err === 'ok' && rsp.data) {
           this.preview = rsp.data;
         }

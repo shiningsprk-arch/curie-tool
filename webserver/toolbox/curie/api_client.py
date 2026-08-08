@@ -130,9 +130,32 @@ def _countdown_sleep(seconds, label, progress_cb=None):
         time.sleep(1)
 
 
+def _is_rate_limit(exception):
+    """True when the exception carries an HTTP 429 status, without
+    over-matching strings like "4290" or "port 4291 refused"."""
+    for attr in ('status_code', 'code'):
+        val = getattr(exception, attr, None)
+        if val is not None:
+            try:
+                if int(val) == 429:
+                    return True
+            except (TypeError, ValueError):
+                pass
+    # requests.HTTPError carries the status on .response.status_code
+    resp = getattr(exception, 'response', None)
+    if resp is not None:
+        try:
+            if int(getattr(resp, 'status_code', 0)) == 429:
+                return True
+        except (TypeError, ValueError):
+            pass
+    # fallback: a word-boundary 429 (not followed by more digits) in the text
+    return bool(re.search(r'\b429\b(?!\d)', str(exception)))
+
+
 def _wait_429(exception, attempt, progress_cb=None, max_retries=3):
     """Sleep on 429 rate limits, return True if retry is allowed."""
-    if '429' in str(exception) and attempt < max_retries:
+    if _is_rate_limit(exception) and attempt < max_retries:
         wait = 60 * (attempt + 1)
         _countdown_sleep(wait, 'Rate limit', progress_cb)
         return True
@@ -602,11 +625,18 @@ class OpenAICompatProvider:
     # Output budget for enrich/review passes (deepseek-chat class models).
     # Step 1 uses a fixed small budget (see generate_book_data).
     DEFAULT_MAX_TOKENS = 16000
+    # Reasoning models (e.g. deepseek-reasoner) spend part of the output
+    # budget on hidden thinking blocks; give them the same headroom as the
+    # Anthropic provider gives DeepSeek.
+    REASONER_MAX_TOKENS = 64000
 
     def __init__(self, api_key, model, api_url=''):
         self.api_key = api_key
         self.model = model or 'deepseek-chat'
-        self.max_tokens = self.DEFAULT_MAX_TOKENS
+        self.max_tokens = (
+            self.REASONER_MAX_TOKENS if 'reasoner' in self.model.lower()
+            else self.DEFAULT_MAX_TOKENS
+        )
         url = (api_url or OPENAI_COMPAT_DEFAULT_URL).strip().rstrip('/')
         if url.endswith('/chat/completions'):
             self.api_url = url

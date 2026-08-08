@@ -236,17 +236,22 @@ class CurieTool(BaseTool):
             logger.warning("[CurieTool] Already running, skipping convert for book_id=%d", book_id)
             return
 
-        task_id = self.create_task(progress_data={"status": "starting", "book_id": book_id})
-        CurieTool._last_task_id = task_id
+        task_id = None
         error_message = None
         book_title = "Unknown"
 
-        def _progress(percent: int, stage: str, **extra):
-            data = {"status": "running", "stage": stage, "book_id": book_id}
-            data.update(extra)
-            self.update_task_progress(task_id, min(percent, 99), data)
-
         try:
+            # create_task must live inside the try: if it raises (DB failure),
+            # the finally block still releases the lock and no task id is
+            # reported (otherwise every later run would silently no-op).
+            task_id = self.create_task(progress_data={"status": "starting", "book_id": book_id})
+            CurieTool._last_task_id = task_id
+
+            def _progress(percent: int, stage: str, **extra):
+                data = {"status": "running", "stage": stage, "book_id": book_id}
+                data.update(extra)
+                self.update_task_progress(task_id, min(percent, 99), data)
+
             books = self.db.get_data_as_dict(ids=[book_id])
             if not books:
                 raise RuntimeError(_("书籍不存在：ID=%d") % book_id)
@@ -362,7 +367,8 @@ class CurieTool(BaseTool):
             logger.error("[CurieTool] Convert failed for book_id=%d: %s", book_id, err)
             logger.error(traceback.format_exc())
         finally:
-            self.complete_task(task_id, error_message=error_message)
+            if task_id is not None:
+                self.complete_task(task_id, error_message=error_message)
             CurieTool._curie_lock.release()
 
     @AsyncService.register_service
@@ -373,12 +379,14 @@ class CurieTool(BaseTool):
             logger.warning("[CurieTool] Already running, skipping regenerate for book_id=%d", book_id)
             return
 
-        task_id = self.create_task(progress_data={"status": "starting", "book_id": book_id})
-        CurieTool._last_task_id = task_id
+        task_id = None
         error_message = None
         book_title = "Unknown"
 
         try:
+            task_id = self.create_task(progress_data={"status": "starting", "book_id": book_id})
+            CurieTool._last_task_id = task_id
+
             books = self.db.get_data_as_dict(ids=[book_id])
             if not books:
                 raise RuntimeError(_("书籍不存在：ID=%d") % book_id)
@@ -434,5 +442,6 @@ class CurieTool(BaseTool):
             logger.error("[CurieTool] Regenerate failed for book_id=%d: %s", book_id, err)
             logger.error(traceback.format_exc())
         finally:
-            self.complete_task(task_id, error_message=error_message)
+            if task_id is not None:
+                self.complete_task(task_id, error_message=error_message)
             CurieTool._curie_lock.release()
