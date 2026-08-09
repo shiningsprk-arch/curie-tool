@@ -795,6 +795,10 @@ class AdminCurieCancel(BaseHandler):
     def post(self):
         """请求取消当前 Curie 任务：BackgroundService.cancel_task 仅标记状态，
         运行线程会在下一个检查点停止（分析分块/限速等待期间可立即中断）。"""
+        tool = CurieTool()
+        if not tool.is_running():
+            # 仅允许取消运行中的任务，避免把已完成/失败记录覆盖为 cancelled
+            return {"err": "task.not_running", "msg": _("当前没有正在运行的 Curie 任务")}
         task_id = CurieTool._last_task_id
         if task_id is None:
             return {"err": "task.not_found", "msg": _("尚未启动 Curie 任务")}
