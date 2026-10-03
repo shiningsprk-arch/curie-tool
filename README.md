@@ -87,7 +87,7 @@ tests/test_curie_core.py           单元测试
 
 ## 许可与致谢
 
-- 本项目以 **MIT 协议**开源（见 [LICENSE](LICENSE)）；
+- 本项目以 **AGPL-3.0** 开源（见 [LICENSE](LICENSE)）；
 - 上游：[Fank1/curie](https://github.com/Fank1/curie)，已获作者许可移植；
 - 适配（MyBooks）：shiningsprk-arch。
 
